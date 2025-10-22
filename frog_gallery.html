@@ -21,7 +21,6 @@
         <div class="flex items-center gap-3">
           <label for="search" class="sr-only">Search species</label>
           <input id="search" type="search" placeholder="Search species or region..." class="px-3 py-2 border rounded-md w-64 bg-white focus:ring focus:ring-sky-200" />
-          <button id="shuffleBtn" class="btn-focus inline-flex items-center gap-2 px-3 py-2 rounded-md bg-sky-600 text-white hover:bg-sky-700">Shuffle</button>
         </div>
       </div>
     </div>
@@ -70,7 +69,6 @@
     const grid=document.getElementById('grid');
     const sharedAudio=document.getElementById('shared-audio');
     const searchInput=document.getElementById('search');
-    const shuffleBtn=document.getElementById('shuffleBtn');
     const lightbox=document.getElementById('lightbox');
     const lightboxImg=document.getElementById('lightbox-img');
     const lightboxClose=document.getElementById('lightbox-close');
@@ -204,12 +202,6 @@
     }
 
     searchInput.addEventListener('input',()=>{renderGrid(filterList(searchInput.value));});
-
-    shuffleBtn.addEventListener('click',()=>{
-      const copy=frogs.slice();
-      for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]];}
-      renderGrid(copy);
-    });
 
     renderGrid(frogs);
   </script>
