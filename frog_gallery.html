@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Frog Species Gallery — Biology Project</title>
+  <meta name="description" content="A clean, accessible gallery of frog species with image and audio playback + download." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{--card-shadow:0 8px 24px rgba(15,23,42,0.06)}
+    .card{box-shadow:var(--card-shadow)}
+    .btn-focus:focus{outline:2px solid rgba(59,130,246,0.5);outline-offset:2px}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+  <header class="bg-white shadow-sm sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <h1 class="text-lg font-semibold tracking-tight">🐸 Frog Species Gallery</h1>
+        <div class="flex items-center gap-3">
+          <label for="search" class="sr-only">Search species</label>
+          <input id="search" type="search" placeholder="Search species or region..." class="px-3 py-2 border rounded-md w-64 bg-white focus:ring focus:ring-sky-200" />
+          <button id="shuffleBtn" class="btn-focus inline-flex items-center gap-2 px-3 py-2 rounded-md bg-sky-600 text-white hover:bg-sky-700">Shuffle</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+    <section class="mb-6">
+      <p class="text-sm text-slate-600">A modern, responsive gallery built for a biology project. Each card includes: image, play audio, download image and download audio. Replace the sample placeholders with your real photos and recordings in the <code class="bg-slate-100 px-1 rounded">/assets/</code> folder.</p>
+    </section>
+
+    <section aria-labelledby="gallery-heading">
+      <h2 id="gallery-heading" class="sr-only">Gallery</h2>
+      <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+    </section>
+  </main>
+
+  <audio id="shared-audio" preload="none"></audio>
+
+  <div id="lightbox" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50" aria-hidden="true">
+    <div class="max-w-4xl w-full bg-white rounded-lg overflow-hidden">
+      <div class="flex items-center justify-between p-2">
+        <h3 id="lightbox-title" class="font-semibold">Species</h3>
+        <button id="lightbox-close" class="px-3 py-1 btn-focus">Close</button>
+      </div>
+      <div class="p-2">
+        <img id="lightbox-img" src="" alt="" class="w-full h-auto object-contain" />
+      </div>
+    </div>
+  </div>
+
+  <footer class="max-w-7xl mx-auto p-4 text-sm text-slate-500">
+    <div>Made for a biology project — built with accessibility and good UX in mind.</div>
+  </footer>
+
+  <script>
+    const frogs = Array.from({length:25}, (_,i) => ({
+      id:i+1,
+      species:`Frog species ${i+1}`,
+      image:`https://picsum.photos/seed/frog${i+1}/600/400`,
+      imageFileName:`frog${i+1}.jpg`,
+      audio:`assets/audio/frog${i+1}.mp3`,
+      audioFileName:`frog${i+1}.mp3`,
+      region:['Amazon','Atlantic','Pantanal','Cerrado'][i%4]
+    }));
+
+    const grid=document.getElementById('grid');
+    const sharedAudio=document.getElementById('shared-audio');
+    const searchInput=document.getElementById('search');
+    const shuffleBtn=document.getElementById('shuffleBtn');
+    const lightbox=document.getElementById('lightbox');
+    const lightboxImg=document.getElementById('lightbox-img');
+    const lightboxClose=document.getElementById('lightbox-close');
+    const lightboxTitle=document.getElementById('lightbox-title');
+    let playingId=null;
+
+    function createCard(frog){
+      const card=document.createElement('article');
+      card.className='card bg-white rounded-lg overflow-hidden border border-slate-100';
+      card.setAttribute('data-id',frog.id);
+      card.innerHTML=`
+        <div class="relative group">
+          <img loading="lazy" src="${frog.image}" alt="Photo of ${frog.species}" class="w-full h-40 object-cover" />
+          <button title="Open image" class="absolute right-2 bottom-2 bg-white/90 backdrop-blur-md px-2 py-1 rounded-md text-sm border btn-focus" data-action="open-image">View</button>
+        </div>
+        <div class="p-3 flex flex-col gap-3">
+          <div class="flex items-start justify-between">
+            <div>
+              <h3 class="text-sm font-semibold leading-tight">${frog.species}</h3>
+              <div class="text-xs text-slate-500">${frog.region}</div>
+            </div>
+            <div class="text-xs text-slate-400">#${frog.id}</div>
+          </div>
+          <div class="flex gap-2">
+            <button class="play-btn btn-focus flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border hover:bg-slate-50" data-action="play-audio">
+              <svg id="play-icon-${frog.id}" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v18l15-9L5 3z"/></svg>
+              <span class="text-sm">Play</span>
+            </button>
+            <button class="btn-focus inline-flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-slate-50" data-action="download-image">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span class="text-sm">Image</span>
+            </button>
+            <a class="btn-focus inline-flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-slate-50" href="${frog.audio}" download="${frog.audioFileName}" data-action="download-audio">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 9v6a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V9"/></svg>
+              <span class="text-sm">Audio</span>
+            </a>
+          </div>
+        </div>`;
+
+      card.addEventListener('click',async(ev)=>{
+        const action=ev.target.closest('[data-action]')?.getAttribute('data-action');
+        if(!action)return;
+        if(action==='open-image'){
+          openLightbox(frog);
+        }else if(action==='play-audio'){
+          togglePlay(frog,card);
+        }else if(action==='download-image'){
+          try{
+            const response=await fetch(frog.image,{mode:'cors'});
+            const blob=await response.blob();
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement('a');
+            a.href=url;
+            a.download=frog.imageFileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+          }catch(e){
+            alert('Failed to download image. Try hosting the images locally.');
+            console.error(e);
+          }
+        }
+      });
+      return card;
+    }
+
+    function renderGrid(list){
+      grid.innerHTML='';
+      const fragment=document.createDocumentFragment();
+      list.forEach(f=>fragment.appendChild(createCard(f)));
+      grid.appendChild(fragment);
+    }
+
+    function togglePlay(frog,card){
+      if(playingId===frog.id){
+        sharedAudio.pause();playingId=null;updatePlayButtons();return;
+      }
+      sharedAudio.src=frog.audio;
+      sharedAudio.play().catch(err=>{console.error('Playback error',err);alert('Unable to play audio. Check that the audio files are in the correct path.');});
+      playingId=frog.id;updatePlayButtons();
+    }
+
+    function updatePlayButtons(){
+      document.querySelectorAll('[data-action="play-audio"]').forEach(btn=>{
+        const article=btn.closest('article');
+        const id=Number(article.getAttribute('data-id'));
+        const svg=btn.querySelector('svg');
+        const label=btn.querySelector('span');
+        if(id===playingId&&!sharedAudio.paused){
+          label.textContent='Pause';svg.innerHTML='<path d="M6 19h4V5H6v14zM14 5v14h4V5h-4z"/>';
+        }else{
+          label.textContent='Play';svg.innerHTML='<path d="M5 3v18l15-9L5 3z"/>';
+        }
+      });
+    }
+
+    sharedAudio.addEventListener('ended',()=>{playingId=null;updatePlayButtons();});
+    sharedAudio.addEventListener('pause',()=>{updatePlayButtons();});
+
+    function openLightbox(frog){
+      lightboxImg.src=frog.image;
+      lightboxImg.alt=`Enlarged photo of ${frog.species}`;
+      lightboxTitle.textContent=frog.species;
+      lightbox.classList.remove('hidden');
+      lightbox.setAttribute('aria-hidden','false');
+      lightboxClose.focus();
+    }
+    function closeLightbox(){
+      lightbox.classList.add('hidden');
+      lightbox.setAttribute('aria-hidden','true');
+    }
+    lightboxClose.addEventListener('click',closeLightbox);
+    lightbox.addEventListener('click',e=>{if(e.target===lightbox)closeLightbox();});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});
+
+    function filterList(q){
+      const normalized=q.trim().toLowerCase();
+      if(!normalized)return frogs.slice();
+      return frogs.filter(f=>(f.species+' '+f.region).toLowerCase().includes(normalized));
+    }
+
+    searchInput.addEventListener('input',()=>{renderGrid(filterList(searchInput.value));});
+
+    shuffleBtn.addEventListener('click',()=>{
+      const copy=frogs.slice();
+      for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]];}
+      renderGrid(copy);
+    });
+
+    renderGrid(frogs);
+  </script>
+</body>
+</html>
