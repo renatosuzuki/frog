@@ -103,10 +103,10 @@
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               <span class="text-sm">Image</span>
             </button>
-            <a class="btn-focus inline-flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-slate-50" href="${frog.audio}" download="${frog.audioFileName}" data-action="download-audio">
+            <button class="btn-focus inline-flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-slate-50" data-action="download-audio">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 9v6a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V9"/></svg>
               <span class="text-sm">Audio</span>
-            </a>
+            </button>
           </div>
         </div>`;
 
@@ -133,6 +133,22 @@
             alert('Failed to download image. Try hosting the images locally.');
             console.error(e);
           }
+        }else if(action==='download-audio'){
+          try{
+            const response=await fetch(frog.audio);
+            const blob=await response.blob();
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement('a');
+            a.href=url;
+            a.download=frog.audioFileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+          }catch(e){
+            alert('Failed to download audio. Check that the audio file exists.');
+            console.error(e);
+          }
         }
       });
       return card;
@@ -146,9 +162,7 @@
     }
 
     function togglePlay(frog,card){
-      if(playingId===frog.id){
-        sharedAudio.pause();playingId=null;updatePlayButtons();return;
-      }
+      if(playingId===frog.id){sharedAudio.pause();playingId=null;updatePlayButtons();return;}
       sharedAudio.src=frog.audio;
       sharedAudio.play().catch(err=>{console.error('Playback error',err);alert('Unable to play audio. Check that the audio files are in the correct path.');});
       playingId=frog.id;updatePlayButtons();
@@ -160,11 +174,7 @@
         const id=Number(article.getAttribute('data-id'));
         const svg=btn.querySelector('svg');
         const label=btn.querySelector('span');
-        if(id===playingId&&!sharedAudio.paused){
-          label.textContent='Pause';svg.innerHTML='<path d="M6 19h4V5H6v14zM14 5v14h4V5h-4z"/>';
-        }else{
-          label.textContent='Play';svg.innerHTML='<path d="M5 3v18l15-9L5 3z"/>';
-        }
+        if(id===playingId&&!sharedAudio.paused){label.textContent='Pause';svg.innerHTML='<path d="M6 19h4V5H6v14zM14 5v14h4V5h-4z"/>';}else{label.textContent='Play';svg.innerHTML='<path d="M5 3v18l15-9L5 3z"/>';}
       });
     }
 
